@@ -1,373 +1,230 @@
 <!DOCTYPE html>
-<html lang="fr">
+<html lang="he" dir="rtl">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Zmanim – Fêtes & Hanouka</title>
-
+    <title>Zmanim Pro - With Midnight</title>
     <script src="https://cdn.tailwindcss.com"></script>
-
     <style>
-        body {
-            font-family: Tahoma, sans-serif;
-            font-weight: bold;
-        }
-
-        .hebrew-font {
-            font-family: "Arial Hebrew", "David", "Miriam", Tahoma, sans-serif;
-            direction: rtl;
-        }
-
-        .termine-text {
-            font-size: 14vw;
-            color: #ef4444;
-        }
-
-        ::-webkit-scrollbar {
-            width: 0;
-        }
-
-        /* Animation pour les bougies */
-        @keyframes flicker {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0.8; }
-        }
+        body { font-family: Tahoma, sans-serif; font-weight: bold; background-color: black; color: white; overflow: hidden; }
+        .hebrew-font { font-family: "Arial Hebrew", "David", "Miriam", Tahoma, sans-serif; direction: rtl; }
+        ::-webkit-scrollbar { width: 0; }
         
-        .candle-flame {
-            animation: flicker 1.5s ease-in-out infinite;
+        .zman-card { transition: all 0.4s ease; min-width: 140px; border: 1px solid #1f2937; position: relative; }
+        .passed-zman { border: 1px solid #facc15 !important; opacity: 0.7; }
+        
+        .next-zman-highlight { 
+            border: 3px solid #facc15 !important; 
+            box-shadow: 0 0 20px rgba(250, 204, 21, 0.5);
+            transform: scale(1.05);
+            z-index: 20;
+            background: rgba(250, 204, 21, 0.05);
         }
+
+        .countdown-active {
+            text-shadow: 0 0 30px rgba(239, 68, 68, 0.4);
+            animation: pulse-red 2s infinite;
+        }
+
+        @keyframes pulse-red {
+            0% { opacity: 1; }
+            50% { opacity: 0.85; }
+            100% { opacity: 1; }
+        }
+
+        .no-scrollbar::-webkit-scrollbar { display: none; }
     </style>
 </head>
 
-<body class="bg-black text-white h-screen w-screen overflow-hidden flex flex-col">
+<body class="h-screen flex flex-col">
 
-<!-- ===== EN-TÊTE : HEURE + DATE HÉBRAÏQUE + DAF YOMI + FÊTES ===== -->
-<div id="header-info" class="hidden p-3 bg-gray-800 border-b-2 border-gray-700">
-    <div class="flex items-center justify-center space-x-6 text-lg flex-wrap">
-        <!-- Heure locale -->
-        <div class="text-yellow-600 text-2xl font-mono" id="header-time">--:--:--</div>
-        
-        <div class="text-gray-600">|</div>
-        
-        <!-- Date hébraïque -->
-        <div class="hebrew-font text-yellow-300 text-xl" id="hebrew-date">טוען...</div>
-        
-        <div class="text-gray-600">|</div>
-        
-        <!-- Daf Yomi -->
-        <div class="text-blue-400 text-lg">
-            <span class="text-gray-400">הדף היומי</span>
-            <span class="hebrew-font ml-2" id="daf-yomi">--</span>
+<header id="header" class="hidden bg-gray-900 border-b border-gray-800 p-3 shadow-2xl">
+    <div class="flex items-center justify-center flex-wrap gap-3 md:gap-5 text-lg md:text-xl">
+        <div class="flex items-center gap-2">
+            <span id="system-time" class="text-yellow-400 text-2xl font-mono">--:--:--</span>
         </div>
-        
-        <!-- Fêtes (apparaît seulement s'il y en a) -->
-        <div id="holiday-container" class="hidden">
-            <div class="text-gray-600">|</div>
-            <div class="text-pink-400 text-xl hebrew-font" id="holiday-name">--</div>
-        </div>
-        
-        <!-- Bougies Hanouka (apparaît seulement pendant Hanouka) -->
-        <div id="chanukah-container" class="hidden">
-            <!--div class="text-gray-600">|</div-->
-            <div class="flex items-center space-x-3">
-                <!--span class="text-blue-400 text-lg hebrew-font">חנוכה:</span-->
-                <div id="chanukah-candles" class="flex space-x-1">
-                    <!-- Les bougies seront ajoutées ici -->
-                </div>
-                <span class="text-yellow-300 text-xl font-bold" id="chanukah-number">--</span>
-            </div>
+        <span class="text-gray-700">|</span>
+        <div id="day-of-week" class="text-blue-200 font-bold">--</div>
+        <span class="text-gray-700">|</span>
+        <div class="hebrew-font text-blue-400" id="hebrew-date">--</div>
+        <span class="text-gray-700">|</span>
+        <div class="text-yellow-400 font-normal" id="gregorian-date">--</div>
+        <span class="text-gray-700">|</span>
+        <div class="flex items-center gap-2">
+            <span class="text-gray-500">דף יומי:</span>
+            <span class="hebrew-font text-green-500" id="daf-yomi">--</span>
         </div>
     </div>
-</div>
+</header>
 
-<!-- ===== ZONE CENTRALE ===== -->
-<div class="flex-grow flex flex-col justify-center items-center text-center p-4">
-    <div id="loading" class="text-2xl animate-pulse">Chargement des zmanim…</div>
-
-    <div id="countdown-container" class="hidden">
-        <div id="next-zman-name" class="text-7xl text-yellow-400 mt-4">--</div>
-        <div id="next-zman-time" class="text-2xl text-gray-500 mt-2">--:--</div> 
-        <div id="timer" class="text-[18vw] leading-none tabular-nums shadow-lg font-bold">00:00:00</div>
+<main class="flex-grow flex flex-col justify-center items-center px-4">
+    <div id="loading-state" class="text-2xl animate-pulse text-blue-500">טוען נתונים...</div>
+    <div id="countdown-zone" class="hidden text-center w-full">
+        <div id="zman-name" class="text-2xl md:text-3xl text-gray-500 mb-1 uppercase tracking-widest">--</div>
+        <h1 id="zman-target-time" class="text-4xl md:text-6xl text-yellow-500 font-extrabold mb-4 hebrew-font drop-shadow-2xl">--</h1>
+        <div class="timer-container">
+            <div id="mode-indicator" class="text-xl md:text-2xl text-white opacity-90 font-bold mb-0 leading-none">מצב שעון נוכחי</div>
+            <div id="main-timer" class="text-[22vw] md:text-[18vw] leading-none font-bold tabular-nums tracking-tighter mt-1">00:00:00</div>
+        </div>
     </div>
-</div>
+</main>
 
-<!-- ===== LISTE DES ZMANIM ===== -->
-<div id="zmanim-list-container" class="hidden h-[9vh] bg-gray-900 border-t-2 border-blue-600">
-    <div id="zmanim-list" class="flex justify-evenly items-center h-full p-2 space-x-2"></div>
-</div>
+<footer id="zmanim-grid" class="hidden bg-gray-950 border-t border-gray-800 p-4 pb-8">
+    <div id="zmanim-list" class="flex justify-center items-center gap-3 overflow-x-auto no-scrollbar"></div>
+</footer>
 
 <script>
-/* ================= CONFIG ================= */
-const GEONAME_ID = 295629; // Jérusalem
-const TWO_HOURS_MS = 2 * 60 * 60 * 1000;
+const CONFIG = {
+    LAT : 31.7946859557658,
+    LNG : 35.21589133333333,
+    TIMEZONE: 'Asia/Jerusalem',
+    COUNTDOWN_LIMIT_MS: 30 * 60 * 1000,
+    GEONAME_ID: 295620
+};
 
-/* ================= ÉTAT ================= */
-let zmanimData = [];
+let state = { zmanim: [], halachicMidnight: null, nextDayFirstZman: null };
 
-/* ================= INIT ================= */
-window.onload = fetchAll;
-
-/* ================= MISE À JOUR HEURE EN-TÊTE ================= */
-function updateHeaderTime() {
-    const now = new Date();
-    document.getElementById('header-time').textContent = 
-        now.toLocaleTimeString('fr-FR', {hour: '2-digit', minute: '2-digit', second: '2-digit'});
-}
-
-/* ================= FETCH ================= */
-async function fetchAll() {
-    const today = new Date().toISOString().split('T')[0];
-
-    const zmanimUrl = `https://www.hebcal.com/zmanim?cfg=json&geonameid=${GEONAME_ID}&date=${today}`;
-    const hebcalUrl = `https://www.hebcal.com/hebcal?cfg=json&start=${today}&end=${today}&geo=geoname&geonameid=${GEONAME_ID}&d=on&year=now&s=on&F=on&h=on`;
-
-    try {
-        const [zmanimRes, hebcalRes] = await Promise.all([
-            fetch(zmanimUrl),
-            fetch(hebcalUrl)
-        ]);
-
-        const zmanimJson = await zmanimRes.json();
-        const hebcalJson = await hebcalRes.json();
-
-        console.log("Hebcal Response:", hebcalJson);
-
-        processHebrewHeader(hebcalJson);
-        processZmanim(zmanimJson);
-
-    } catch (err) {
-        console.error(err);
-        startLocalClockFallback();
+const Utils = {
+    getElement(id) { return document.getElementById(id); },
+    formatTime(date, sec = true) {
+        return date.toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit', second: sec ? '2-digit' : undefined, hour12: false });
     }
-}
+};
 
-/* ================= DATE HÉBRAÏQUE + DAF YOMI + FÊTES + HANOUKA ================= */
-function processHebrewHeader(data) {
-    const items = data.items || [];
-    
-    console.log("Items:", items);
+const UI = {
+    async update() {
+        const now = new Date();
+        if (state.halachicMidnight && now >= state.halachicMidnight) { await App.loadDay(new Date()); return; }
 
-    // ===== DATE HÉBRAÏQUE =====
-    let hebDate = '';
-    for (const item of items) {
-        if (item.hebrew && /[\u0590-\u05FF]/.test(item.hebrew)) {
-            hebDate = item.hebrew;
-            break;
+        const activeZman = [...state.zmanim].reverse().find(i => i.time <= now);
+        let nextZman = state.zmanim.find(i => i.time > now);
+        let nextZmanIndex = state.zmanim.findIndex(i => i.time > now);
+
+        if (!nextZman && state.nextDayFirstZman) {
+            nextZman = state.nextDayFirstZman;
+            nextZmanIndex = 0; 
         }
-    }
-    if (!hebDate) {
-        for (const item of items) {
-            if (item.hdate && /[\u0590-\u05FF]/.test(item.hdate)) {
-                hebDate = item.hdate;
-                break;
+
+        Utils.getElement('system-time').textContent = Utils.formatTime(now);
+        Utils.getElement('zman-name').textContent = activeZman ? activeZman.name + " עבר" : "הכנה ליום חדש";
+        
+        document.querySelectorAll('.zman-card').forEach((card, i) => {
+            card.classList.remove('passed-zman', 'next-zman-highlight');
+            if (i === nextZmanIndex) {
+                card.classList.add('next-zman-highlight');
+            } else if (state.zmanim[i].time <= now) {
+                card.classList.add('passed-zman');
+            }
+        });
+
+        const timer = Utils.getElement('main-timer');
+        const mode = Utils.getElement('mode-indicator');
+        const target = Utils.getElement('zman-target-time');
+
+        if (nextZman) {
+            const diff = nextZman.time - now;
+            target.textContent = `הזמן הבא: ${nextZman.name} ב-${Utils.formatTime(nextZman.time, false)}`;
+
+            if (diff > CONFIG.COUNTDOWN_LIMIT_MS) {
+                timer.textContent = Utils.formatTime(now);
+                timer.className = "text-[22vw] md:text-[18vw] text-white font-bold tracking-tighter leading-none";
+                mode.textContent = "מצב שעון נוכחי";
+            } else {
+                const h = Math.floor(diff / 3600000), m = Math.floor((diff % 3600000) / 60000), s = Math.floor((diff % 60000) / 1000);
+                timer.textContent = `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+                let color = 'text-yellow-500';
+                if (diff <= 300000) color = 'text-red-500 countdown-active'; 
+                else if (diff <= 900000) color = 'text-orange-500';
+                timer.className = `text-[22vw] md:text-[18vw] font-bold ${color} tracking-tighter leading-none`;
+                mode.textContent = `ספירה לאחור ל${nextZman.name}`;
             }
         }
     }
+};
 
-    // ===== DAF YOMI =====
-    const dafItem = items.find(i => i.category === 'dafyomi');
-    let dafText = 'לא זמין';
-    if (dafItem) {
-        if (dafItem.hebrew && /[\u0590-\u05FF]/.test(dafItem.hebrew)) {
-            dafText = dafItem.hebrew;
-        } else if (dafItem.title) {
-            dafText = dafItem.title.replace('Daf Yomi: ', '').trim();
+const API = {
+    async fetchDayData(date) {
+        const dateStr = date.toISOString().split('T')[0];
+        const sunUrl = `https://api.sunrisesunset.io/json?lat=${CONFIG.LAT}&lng=${CONFIG.LNG}&date=${dateStr}&timezone=${CONFIG.TIMEZONE}`;
+        const hebUrl = `https://www.hebcal.com/hebcal?cfg=json&start=${dateStr}&end=${dateStr}&geo=geoname&geonameid=${CONFIG.GEONAME_ID}&d=on&s=on&F=on&h=on`;
+        
+        try {
+            const [sunRes, hebRes] = await Promise.all([fetch(sunUrl), fetch(hebUrl)]);
+            const sunData = await sunRes.json();
+            const hebData = await hebRes.json();
+            const r = sunData.results;
+
+            const parse = (timeStr, base) => {
+                const [time, period] = timeStr.split(' ');
+                let [h, m, s] = time.split(':').map(Number);
+                if (period === 'PM' && h !== 12) h += 12;
+                if (period === 'AM' && h === 12) h = 0;
+                const d = new Date(base); d.setHours(h, m, s || 0, 0); return d;
+            };
+
+            const sunrise = parse(r.sunrise, date);
+            const sunset = parse(r.sunset, date);
+            const noon = parse(r.solar_noon, date);
+            const dayLen = sunset - sunrise;
+            const midnight = new Date(noon.getTime() + 12 * 60 * 60 * 1000);
+
+            return {
+                zmanim: [
+                    { name: "עלות השחר", time: new Date(sunrise - 72 * 60000) },
+                    { name: "נץ החמה", time: sunrise },
+                    { name: "סוף זמן שמע", time: new Date(sunrise.getTime() + (dayLen / 4)) },
+                    { name: "חצות היום", time: noon },
+                    { name: "מנחה גדולה", time: new Date(noon.getTime() + 30 * 60000) },
+                    { name: "פלג המנחה", time: new Date(sunset.getTime() - (dayLen * 1.25 / 12)) },
+                    { name: "שקיעה", time: sunset },
+                    { name: "צאת הכוכבים", time: new Date(sunset.getTime() + 20 * 60000) },
+                    { name: "חצות לילה", time: midnight } // הוספת חצות לילה לרשימה
+                ].sort((a,b) => a.time - b.time),
+                halachicMidnight: midnight,
+                calendar: hebData.items
+            };
+        } catch (e) { return null; }
+    }
+};
+
+const App = {
+    async loadDay(date) {
+        let data = await API.fetchDayData(date);
+        const now = new Date();
+        if (data && now < data.halachicMidnight && now.getHours() < 12) {
+            const yesterday = new Date(date); yesterday.setDate(yesterday.getDate() - 1);
+            data = await API.fetchDayData(yesterday);
+            date = yesterday;
         }
-    }
+        
+        const tomorrow = new Date(date); tomorrow.setDate(tomorrow.getDate() + 1);
+        const nextData = await API.fetchDayData(tomorrow);
+        if (nextData) state.nextDayFirstZman = nextData.zmanim[0];
 
-    // ===== FÊTES =====
-    // Cherche les fêtes (holiday) mais exclut Hanouka qu'on traitera séparément
-    const holidayItem = items.find(i => 
-        i.category === 'holiday' && 
-        !i.title.includes('Chanukah') &&
-        !i.title.includes('Candle')
-    );
-    
-    if (holidayItem) {
-        const holidayName = holidayItem.hebrew || holidayItem.title;
-        document.getElementById('holiday-name').textContent = holidayName;
-        document.getElementById('holiday-container').classList.remove('hidden');
-        console.log("Fête trouvée:", holidayName);
-    }
-
-    // ===== HANOUKA - NOMBRE DE BOUGIES =====
-    // Cherche "Chanukah: X Candles" dans les titres
-    const chanukahItem = items.find(i => 
-        i.title && i.title.includes('Chanukah') && i.title.includes('Candle')
-    );
-    
-    if (chanukahItem) {
-        // Extrait le nombre de bougies du titre (ex: "Chanukah: 3 Candles" -> 3)
-        const match = chanukahItem.title.match(/Chanukah: (\d+) Candle/);
-        if (match) {
-            const numCandles = parseInt(match[1]);
-            displayChanukahCandles(numCandles);
-            console.log("Hanouka - Bougies:", numCandles);
-        }
-    }
-
-    // ===== AFFICHAGE =====
-    document.getElementById('hebrew-date').textContent = hebDate || 'תאריך לא זמין';
-    document.getElementById('daf-yomi').textContent = dafText;
-    document.getElementById('header-info').classList.remove('hidden');
-    
-    updateHeaderTime();
-    setInterval(updateHeaderTime, 1000);
-}
-
-/* ================= AFFICHAGE BOUGIES HANOUKA ================= */
-function displayChanukahCandles(numCandles) {
-    const container = document.getElementById('chanukah-candles');
-    const numberEl = document.getElementById('chanukah-number');
-    
-    container.innerHTML = '';
-    
-    // Crée les bougies (+ shamash)
-    for (let i = 0; i < numCandles; i++) {
-        const candle = document.createElement('div');
-        candle.className = 'flex flex-col items-center';
-        candle.innerHTML = `
-            <div class="w-2 h-3 bg-yellow-400 candle-flame rounded-full"></div>
-            <div class="w-1 h-6 bg-blue-500"></div>
-        `;
-        container.appendChild(candle);
-    }
-    
-    // Ajoute le shamash (bougie servante) plus haute
-    const shamash = document.createElement('div');
-    shamash.className = 'flex flex-col items-center ml-2';
-    shamash.innerHTML = `
-        <div class="w-2 h-3 bg-orange-400 candle-flame rounded-full"></div>
-        <div class="w-1 h-8 bg-white"></div>
-    `;
-    container.appendChild(shamash);
-    
-    numberEl.textContent = `${numCandles} נרות`;
-    document.getElementById('chanukah-container').classList.remove('hidden');
-}
-
-/* ================= חצות הלילה HALAKHIQUE ================= */
-function calculateChatzotLayla(sunset, sunriseTomorrow) {
-    return new Date(sunset.getTime() + (sunriseTomorrow - sunset) / 2);
-}
-
-/* ================= ZMANIM ================= */
-function processZmanim(result) {
-    const t = result.times;
-    if (!t) return startLocalClockFallback();
-
-    const sunset = new Date(t.sunset);
-    const sunriseTomorrow = new Date(t.sunrise);
-    sunriseTomorrow.setDate(sunriseTomorrow.getDate() + 1);
-
-    const chatzotLayla = calculateChatzotLayla(sunset, sunriseTomorrow);
-
-    const raw = [
-        ["עלות השחר", t.alotHaShachar],
-        ["משיכיר", t.misheyakir],
-        ["נץ החמה", t.sunrise],
-        ["סוף זמן שמע", t.sofZmanShma],
-        ["חצות היום", t.chatzot],
-        ["מנחה גדולה", t.minchaGedola],
-        ["מנחה קטנה", t.minchaKetana],
-        ["פלג המנחה", t.plagHaMincha],
-        ["שקיעה", t.sunset],
-        ["צאת הכוכבים", t.tzeit7083deg],
-        ["חצות הלילה", chatzotLayla.toISOString()]
-    ];
-
-    zmanimData = raw
-        .filter(r => r[1])
-        .map(r => {
-            const timeObj = new Date(r[1]);
-            // Ajoute des secondes aléatoires pour un aspect plus naturel
-            const randomSeconds = Math.floor(Math.random() * 31) + 15;
-            timeObj.setSeconds(randomSeconds);
-            return { type: 'zman', name: r[0], timeObj };
-        })
-        .filter(z => !isNaN(z.timeObj))
-        .sort((a, b) => a.timeObj - b.timeObj);
-
-    document.getElementById('loading').style.display = 'none';
-    document.getElementById('countdown-container').classList.remove('hidden');
-    document.getElementById('zmanim-list-container').classList.remove('hidden');
-
-    renderList();
-    setInterval(updateCountdown, 1000);
-    updateCountdown();
-}
-
-/* ================= LISTE ================= */
-function renderList() {
-    const el = document.getElementById('zmanim-list');
-    el.innerHTML = '';
-
-    zmanimData.forEach(item => {
-        const div = document.createElement('div');
-        div.className = "flex-1 bg-gray-800 p-2 rounded text-center";
-        div.innerHTML = `
-            <div class="text-gray-300 text-lg hebrew-font">${item.name}</div>
-            <div class="text-yellow-300 text-2xl font-mono">
-                ${item.timeObj.toLocaleTimeString('fr-FR', {hour: '2-digit', minute: '2-digit', second: '2-digit'})}
-            </div>
-        `;
-        el.appendChild(div);
-    });
-}
-
-/* ================= COMPTE À REBOURS ================= */
-function updateCountdown() {
-    const now = new Date();
-    const timer = document.getElementById('timer');
-    const nameEl = document.getElementById('next-zman-name');
-    const timeEl = document.getElementById('next-zman-time');
-
-    timer.className = "text-[18vw] leading-none font-mono";
-
-    const next = zmanimData.find(z => z.type === 'zman' && z.timeObj > now);
-    if (!next) {
-        timer.textContent = "סיים";
-        nameEl.textContent = "לילה טוב";
-        timeEl.textContent = "";
-        return;
-    }
-
-    const diff = next.timeObj - now;
-
-    if (diff > TWO_HOURS_MS) {
-        timer.classList.add('text-yellow-400');
-        timer.textContent = now.toLocaleTimeString('fr-FR', {hour: '2-digit', minute: '2-digit', second: '2-digit'});
-        nameEl.textContent = next.name + " (רחוק)";
-        timeEl.textContent = "בשעה " + next.timeObj.toLocaleTimeString('fr-FR', {hour: '2-digit', minute: '2-digit'});
-        return;
-    }
-
-    const h = Math.floor(diff / 3600000);
-    const m = Math.floor(diff % 3600000 / 60000);
-    const s = Math.floor(diff % 60000 / 1000);
-
-    timer.textContent =
-        `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
-    nameEl.textContent = next.name;
-    timeEl.textContent = "בשעה " + next.timeObj.toLocaleTimeString('fr-FR', {hour: '2-digit', minute: '2-digit'});
-}
-
-/* ================= FALLBACK HEURE LOCALE ================= */
-function startLocalClockFallback() {
-    document.getElementById('loading').style.display = 'none';
-    document.getElementById('countdown-container').classList.remove('hidden');
-    
-    updateHeaderTime();
-    setInterval(updateHeaderTime, 1000);
-
-    setInterval(() => {
-        document.getElementById('timer').textContent =
-            new Date().toLocaleTimeString('fr-FR');
-        document.getElementById('next-zman-name').textContent = "השעה";
-        document.getElementById('next-zman-time').textContent = "";
-    }, 1000);
-}
+        this.applyData(data, date);
+    },
+    applyData(data, date) {
+        state.zmanim = data.zmanim; state.halachicMidnight = data.halachicMidnight;
+        Utils.getElement('day-of-week').textContent = date.toLocaleDateString('he-IL', { weekday: 'long' });
+        Utils.getElement('hebrew-date').textContent = data.calendar.find(i => i.hebrew)?.hebrew || '';
+        Utils.getElement('gregorian-date').textContent = date.toLocaleDateString('he-IL', { day: '2-digit', month: '2-digit', year: 'numeric' });
+        Utils.getElement('daf-yomi').textContent = data.calendar.find(i => i.category === 'dafyomi')?.hebrew || '';
+        
+        const list = Utils.getElement('zmanim-list'); list.innerHTML = '';
+        state.zmanim.forEach(z => {
+            const d = document.createElement('div');
+            d.className = `zman-card bg-gray-900 p-3 rounded-lg text-center`;
+            d.innerHTML = `<div class="text-gray-500 text-[10px] md:text-xs mb-1 uppercase tracking-wider">${z.name}</div><div class="text-white text-lg md:text-xl font-bold font-mono">${Utils.formatTime(z.time, true)}</div>`;
+            list.appendChild(d);
+        });
+        Utils.getElement('loading-state').style.display = 'none';
+        Utils.getElement('countdown-zone').classList.remove('hidden');
+        Utils.getElement('header').classList.remove('hidden');
+        Utils.getElement('zmanim-grid').classList.remove('hidden');
+    },
+    async init() { await this.loadDay(new Date()); setInterval(() => UI.update(), 1000); }
+};
+document.addEventListener('DOMContentLoaded', () => App.init());
 </script>
-
 </body>
 </html>
